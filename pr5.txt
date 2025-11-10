@@ -1,0 +1,105 @@
+import java.util.*;
+class Process{
+	int pid;
+	int arrivalTime;
+	int burstTime;
+	int priority;
+	int waitingTime;
+	int turnaroundTime;
+	int completionTime;
+
+	Process(int pid, int arrivalTime, int burstTime, int priority){
+		this.pid = pid;
+		this.arrivalTime = arrivalTime;
+		this.burstTime = burstTime;
+		this.priority = priority;
+	}
+}
+
+public class FCFSandPRIORITY{
+	static void fcfsScheduling(List<Process> processes){
+		processes.sort(Comparator.comparingInt(p -> p.arrivalTime));
+		int currentTime = 0;
+
+		for(Process p : processes){
+			if(currentTime < p.arrivalTime)
+				currentTime = p.arrivalTime;
+
+			p.waitingTime = currentTime - p.arrivalTime;
+			p.completionTime = currentTime + p.burstTime;
+			p.turnaroundTime = p.completionTime - p.arrivalTime;
+			currentTime = p.completionTime;
+		}
+		displayResults(processes, "FCFS");
+	}
+
+	static void priorityScheduling(List<Process> processes){
+		processes.sort(Comparator.comparingInt(p -> p.arrivalTime));
+
+		int currentTime = 0, completed = 0;
+		boolean[] done = new boolean[processes.size()];
+
+		while(completed < processes.size()){
+			int idx = -1, minPriority = Integer.MAX_VALUE;
+
+			for(int i = 0; i < processes.size(); i++){
+				Process p = processes.get(i);
+				if(!done[i] && p.arrivalTime <= currentTime){
+					if(p.priority < minPriority){
+						minPriority = p.priority;
+						idx = i;
+					}
+				}
+			}
+			if(idx == -1){
+				currentTime++;
+				continue;
+			}
+
+			Process p = processes.get(idx);
+			p.waitingTime = currentTime - p.arrivalTime;
+			p.completionTime = currentTime + p.burstTime;
+			p.turnaroundTime = p.completionTime - p.arrivalTime;
+			currentTime += p.burstTime;
+			done[idx] = true;
+			completed++;
+		}
+		displayResults(processes, "Priority (Non-Preemptive)");
+	}
+	static void displayResults(List<Process> processes, String algoName){
+		double totalWT = 0, totalTAT = 0;
+
+		System.out.println("\n=== " + algoName + " Scheduling ===");
+		System.out.println("PID\tAT\tBT\tPR\tCT\tTAT\tWT");
+
+		for(Process p : processes){
+			totalWT += p.waitingTime;
+			totalTAT += p.turnaroundTime;
+			System.out.printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\n", p.pid, p.arrivalTime, p.burstTime, p.priority, p.completionTime, p.turnaroundTime, p.waitingTime);
+		}
+		System.out.printf("\nAverage Turnaround Time = %.2f", totalTAT / processes.size());
+		System.out.printf("\nAverage Waiting Time = %.2f\n", totalWT / processes.size());
+	}
+
+	public static void main(String[] args){
+		Scanner sc = new Scanner(System.in);
+		List<Process> processList = new ArrayList<>();
+		System.out.print("Enter number of processes: ");
+		int n = sc.nextInt();
+
+		for(int i = 0; i < n; i++){
+			System.out.println("Enter Arrival Time, Burst Time, Priority for Process "+ (i + 1) + ": ");
+			int at = sc.nextInt();
+			int bt = sc.nextInt();
+			int pr = sc.nextInt();
+			processList.add(new Process(i+1, at, bt, pr));
+		}
+
+		List<Process> fcfsList = new ArrayList<>();
+		for(Process p : processList)
+			fcfsList.add(new  Process(p.pid, p.arrivalTime, p.burstTime, p.priority));
+		
+		fcfsScheduling(fcfsList);
+		priorityScheduling(processList);
+	}
+}

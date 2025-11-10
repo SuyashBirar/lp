@@ -1,0 +1,132 @@
+import java.io.*;
+import java.util.*;
+public class MacroProcessorPass1{
+	static List<String>MDT = new ArrayList<>();
+	static Map<String, String>MNT = new LinkedHashMap<>();
+	static Map<String, String>ALA = new HashMap<>();
+	static int mntPtr = 0, mdtPtr = 0;
+
+	public static void main(String args[]){
+		try{
+			pass1();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	static void pass1() throws Exception{
+		BufferedReader input = new BufferedReader(new InputStreamReader(new FileInputStream("input.txt")));
+		PrintWriter out_pass1 = new PrintWriter(new FileWriter("output.txt"), true);
+		PrintWriter out_mnt = new PrintWriter(new FileWriter("MNT.txt"), true);
+		PrintWriter out_mdt = new PrintWriter(new FileWriter("MDT.txt"), true);
+		
+		String s;
+		boolean processingMacroDefinition = false;
+		Boolean processMacroName = false;
+		
+		System.out.println("==========PASS 1 OUTPUT==========");
+
+		while((s = input.readLine()) != null){
+			String[] s_arr = tokenizeString(s, " ");
+			if(s_arr.length == 0) continue;
+			
+			String curToken = s_arr[0];
+
+			if(curToken.equalsIgnoreCase("MACRO")){
+				processingMacroDefinition = true;
+				processMacroName = true;
+				continue;
+			}
+			
+			if(processingMacroDefinition){
+				if(curToken.equalsIgnoreCase("MEND")){
+					MDT.add(mdtPtr++, s);
+					processingMacroDefinition = false;
+					continue;
+				}
+				if(processMacroName){
+					String macroName = s_arr[0];
+					String argList = s.substring(macroName.length()).trim();
+
+					MNT.put(macroName, String.valueOf(mdtPtr));
+					mntPtr++;
+					
+					processMacroName = false;
+					processArgumentList(argList);
+					MDT.add(mdtPtr++, macroName + " " + argList);
+					continue;
+				}
+				
+				//Convert macro body args
+				String indexedLine = processArguments(s);
+				MDT.add(mdtPtr++, indexedLine);
+			}else{
+				out_pass1.println(s);
+				System.out.println(s);
+			}
+		}
+		input.close();
+		//Print MNT
+		System.out.println("==========MNT==========");
+		for(Map.Entry<String, String>entry : MNT.entrySet()){
+			String row = entry.getKey() + " " + entry.getValue();
+			System.out.println(row);
+			out_mnt.println(row);
+		}
+			
+		//Print MDT
+		System.out.println("==========MDT==========");
+		for(int i = 0; i < MDT.size(); i++){
+			String row = i + " " + MDT.get(i);
+			System.out.println(row);
+			out_mdt.println(row);
+		}
+		out_pass1.close();
+		out_mnt.close();
+		out_mdt.close();
+	}
+	
+	static void processArgumentList(String argList){
+		StringTokenizer st = new StringTokenizer(argList, ",", false);
+		ALA.clear();
+		int index = 1;
+		while(st.hasMoreTokens()){
+			String curArg = st.nextToken().trim();
+			if(curArg.contains("=")){
+				curArg = curArg.substring(0, curArg.indexOf("="));
+			}
+			ALA.put(curArg, "#" + index);
+			index++;
+		}
+	}
+	static String processArguments(String line){
+		for(Map.Entry<String, String>entry : ALA.entrySet()){
+			line = line.replace(entry.getKey(), entry.getValue());
+		}
+		return line;
+	}
+	static String[] tokenizeString(String str, String separator){
+		StringTokenizer st = new StringTokenizer(str, separator, false);
+		String[] s_arr = new String[st.countTokens()];
+		for(int i = 0; i < s_arr.length; i++){
+			s_arr[i] = st.nextToken();
+		}
+		return s_arr;
+	}
+}
+
+
+
+
+
+//input.txt
+MACRO
+INCR &A
+ADD &A, =1
+MEND
+START
+INCR DATA
+END
+
+
+

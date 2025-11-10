@@ -1,0 +1,105 @@
+import java.util.*;
+
+public class PageReplacement{
+	public static void main(String[] args){
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Enter number of frames");
+		int framesCount = sc.nextInt();
+
+		System.out.println("Enter number of pages in reference string: ");
+		int n = sc.nextInt();
+
+		int[] reference = new int[n];
+		System.out.print("Entter reference string: ");
+		for(int i = 0; i < n; i++){
+			reference[i] = sc.nextInt();
+		}
+
+		System.out.println("\n=== FIFO Page Replacement ===");
+		fifo(reference, framesCount);
+
+		System.out.println("\n=== Optimal Page Replacement ===");
+		optimal(reference, framesCount);
+
+		sc.close();
+	}
+
+	public static void fifo(int[] reference, int framesCount){
+		Queue<Integer> queue = new LinkedList<>();
+		Set<Integer> frames = new HashSet<>();
+		int pageFaults = 0;
+
+		System.out.printf("%-10s%-20s%s\n", "Reference", "Frames", "Status");
+
+		for(int page : reference){
+			if(!frames.contains(page)){
+				if(frames.size() == framesCount){
+					int removed = queue.poll();
+					frames.remove(removed);
+				}
+				frames.add(page);
+				queue.add(page);
+				pageFaults++;
+				printFrames(page, frames, "F");
+			}
+			else{
+				printFrames(page, frames, "H");
+			}
+		}
+		System.out.println("Total Page faults = " + pageFaults);
+	}
+
+	public static void optimal(int[] reference, int framesCount){
+		List<Integer> frames = new ArrayList<>();
+		int pageFaults = 0;
+
+		System.out.printf("%-10s%-20s%s\n", "Reference", "Frames", "Status");
+
+		for(int i = 0; i < reference.length; i++){
+			int page = reference[i];
+
+			if(frames.contains(page)){
+				printFrames(page, frames, "H");
+			} else {
+				if(frames.size() < framesCount) {
+					frames.add(page);
+				} else {
+					int indexToReplace = findOptimalReplaceIndex(reference, frames, i + 1);
+					frames.set(indexToReplace, page);
+				}
+				pageFaults++;
+				printFrames(page, frames, "F");
+			}
+		}
+		System.out.println("Total Page Faults = " + pageFaults);
+	}
+	public static int findOptimalReplaceIndex(int[] reference, List<Integer> frames, int startIndex){
+		int farthestIndex = -1;
+		int replaceIndex = -1;
+
+		for(int i = 0; i < frames.size(); i++){
+			int currentPage = frames.get(i);
+			int nextUse = Integer.MAX_VALUE;
+
+			for(int j = startIndex; j < reference.length; j++){
+				if(reference[j] == currentPage){
+					nextUse = j;
+					break;
+				}
+			}
+			if(nextUse == Integer.MAX_VALUE){
+				return i;
+			}
+			if(nextUse > farthestIndex){
+				farthestIndex = nextUse;
+				replaceIndex = i;
+			}
+		}
+		return replaceIndex;
+	}
+
+	public static void printFrames(int page, Collection<Integer> frames, String status){
+		System.out.printf("%-10d%-20s%s\n", page, frames, status);
+	}
+}

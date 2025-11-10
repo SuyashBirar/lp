@@ -1,0 +1,117 @@
+import java.util.*;
+public class SJFAndRoundRobin{
+	static class Process{
+		int pid, arrivalTime, burstTime, remainingTime, completionTime, waitingTime, turnaroundTime;
+		Process(int pid, int arrivalTime, int burstTime){
+			this.pid = pid;
+			this.arrivalTime = arrivalTime;
+			this.burstTime = burstTime;
+			this.remainingTime = burstTime;
+		}
+	}
+
+	static void sjfPreemptive(List<Process> processes){
+		int n = processes.size();
+		int completed = 0, currentTime = 0, prev = -1;
+		double totalWT = 0, totalTAT = 0;
+
+		while(completed != n){
+			Process current = null;
+			int minRT = Integer.MAX_VALUE;
+
+			for(Process p : processes){
+				if(p.arrivalTime <= currentTime && p.remainingTime > 0 && p.remainingTime < minRT){
+					minRT = p.remainingTime;
+					current = p;
+				}
+			}
+			if(current == null){
+				currentTime++;
+				continue;
+			}
+
+			current.remainingTime--;
+			currentTime++;
+
+			if(current.remainingTime == 0){
+				completed++;
+				current.completionTime = currentTime;
+				current.turnaroundTime = current.completionTime - current.arrivalTime;
+				current.waitingTime = current.turnaroundTime - current.burstTime;
+
+				totalWT += current.waitingTime;
+				totalTAT += current.turnaroundTime;
+			}
+		}
+
+		System.out.println("\n=== Shortest Job First (Preemptive) ===");
+		System.out.println("PID\tAT\tBT\tCT\tTAT\tWT");
+		for(Process p : processes)
+			System.out.println(p.pid + "\t" + p.arrivalTime + "\t" + p.burstTime + "\t" + p.completionTime + "\t" + p.turnaroundTime + "\t" + p.waitingTime);
+		System.out.printf("\nAverage Turnaround Time: %.2f", totalTAT / n);
+		System.out.printf("\nAverage Waiting Time: %.2f", totalWT / n);
+	}
+	static void roundRobin(List<Process> processes, int quantum){
+		int n = processes.size();
+		Queue<Process> queue = new LinkedList<>();
+		int currentTime = 0;
+		double totalWT = 0, totalTAT = 0;
+
+		processes.sort(Comparator.comparingInt(p -> p.arrivalTime));
+		int index = 0;
+		queue.add(processes.get(index));
+		index++;
+
+		while(!queue.isEmpty()){
+			Process current = queue.poll();
+			if(current.remainingTime > quantum){
+				current.remainingTime -= quantum;
+				currentTime += quantum;
+			} else {
+				currentTime += current.remainingTime;
+				current.remainingTime = 0;
+				current.completionTime = currentTime;
+				current.turnaroundTime = current.completionTime - current.arrivalTime;
+				current.waitingTime = current.turnaroundTime - current.burstTime;
+				totalWT += current.waitingTime;
+				totalTAT += current.turnaroundTime;
+			}
+			while(index < n && processes.get(index).arrivalTime <= currentTime){
+				queue.add(processes.get(index));
+				index++;
+			}
+
+			if(current.remainingTime > 0)
+				queue.add(current);
+			else if(queue.isEmpty() && index < n)
+				queue.add(processes.get(index++));
+		}
+		System.out.println("\n=== Round Robin (Preemptive) ===");
+		System.out.println("PID\tAT\tBT\tCT\tAT\tWT");
+		for(Process p : processes)
+			System.out.println(p.pid + "\t" + p.arrivalTime + "\t" + p.burstTime + "\t" + p.completionTime + "\t" + p.turnaroundTime + "\t" + p.waitingTime);
+		System.out.printf("\nAverage Turnaround Time: %.2f", totalTAT / n);
+		System.out.printf("\nAverage Waiting Time: %.2f", totalWT / n);
+	}
+	public static void main(String args[]){
+		Scanner sc = new Scanner(System.in);
+
+		System.out.println("Enter number of processes:");
+		int n = sc.nextInt();
+		List<Process> processes1 = new ArrayList<>();
+		List<Process> processes2 = new ArrayList<>();
+
+		for(int i = 0; i < n; i++){
+			System.out.println("Enter Arrival Time and Burst Time for Process " + (i + 1) + ": ");
+			int at = sc.nextInt();
+			int bt = sc.nextInt();
+			processes1.add(new Process(i + 1, at, bt));
+			processes2.add(new Process(i + 1, at, bt));
+		}
+		System.out.print("Enter Time Quantum for Round Robin: ");
+		int quantum = sc.nextInt();
+
+		sjfPreemptive(processes1);
+		roundRobin(processes2, quantum);
+	}
+}

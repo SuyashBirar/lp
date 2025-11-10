@@ -1,0 +1,157 @@
+
+import java.io.*;
+import java.util.*;
+// Tuple class
+class Tuple {
+	String mnemonic, m_class, opcode;
+	int length;
+	Tuple() {}
+	Tuple(String s1, String s2, String s3, String s4) {
+		mnemonic = s1;
+		m_class = s2;
+		opcode = s3;
+		length = Integer.parseInt(s4);
+	}
+}
+// Symbol Table Tuple
+class SymTuple {
+	String symbol, address, length;
+	SymTuple(String s1, String s2, String s3) {
+		symbol = s1;
+		address = s2;
+		length = s3;
+	}
+}
+// Literal Table Tuple
+class LitTuple {
+	String literal, address, length;
+	LitTuple() {}
+	LitTuple(String s1, String s2, String s3) {
+		literal = s1;
+		address = s2;
+		length = s3;
+	}
+}
+public class AssemblerPass2 {
+	static int lc, iSymTabPtr = 0, iLitTabPtr = 0, iPoolTabPtr = 0;
+	static int poolTable[] = new int[10];
+	static Map<String, Tuple> MOT;
+	static ArrayList<SymTuple> symtable;
+	static ArrayList<LitTuple> littable;
+	static Map<String, String> regAddressTable;
+	static PrintWriter out_pass2;
+	static void initializeTables() throws Exception {
+		symtable = new ArrayList<>();
+		littable = new ArrayList<>();
+		regAddressTable = new HashMap<>();
+		MOT = new HashMap<>();
+		String s;
+		BufferedReader br;
+		// Reading Symbol Table
+		br = new BufferedReader(new InputStreamReader(new FileInputStream("symtable.txt")));
+		while ((s = br.readLine()) != null) {
+			StringTokenizer st = new StringTokenizer(s, "\t", false);
+			symtable.add(new SymTuple(st.nextToken(), st.nextToken(), ""));
+		}
+		br.close();
+		// Reading Literal Table
+		br = new BufferedReader(new InputStreamReader(new FileInputStream("littable.txt")));
+			while ((s = br.readLine()) != null) {
+			StringTokenizer st = new StringTokenizer(s, "\t", false);
+			littable.add(new LitTuple(st.nextToken(), st.nextToken(), ""));
+		}
+		br.close();
+		// Initialize register address table
+		regAddressTable.put("AREG", "1");
+		regAddressTable.put("BREG", "2");
+		regAddressTable.put("CREG", "3");
+		regAddressTable.put("DREG", "4");
+	}
+	static void pass2() throws Exception {
+		BufferedReader input = new BufferedReader(new InputStreamReader(new FileInputStream("input.txt")));
+		out_pass2 = new PrintWriter(new FileWriter("output_pass2.txt"), true);
+		String s;
+		while ((s = input.readLine()) != null) {
+			if (s.trim().isEmpty()) continue;
+			String[] tokens = s.split("\\s+");
+			String lc = tokens[0];
+			String output = "";
+			// Skip Assembler Directives (AD)
+			if (tokens[1].contains("AD")) continue;
+			// Handle Declarative Statements
+			else if (tokens[1].equals("(DL,02)")) {
+				// Example: (DL,02) (C,5)
+				String constant = tokens[2].substring(tokens[2].indexOf(',') + 1, tokens[2].indexOf(')'));
+				output = lc + "\t00\t0\t" + constant;
+			}
+			// Declarative: DS (DL,01)
+			else if (tokens[1].equals("(DL,01)")) {
+				output = lc + "\t00\t0\t0";
+			}
+			// Imperative Statements (IS)
+			else if (tokens[1].contains("IS")) {
+				String opcode = tokens[1].substring(tokens[1].indexOf(',') + 1, tokens[1].indexOf(')'));
+				String reg = "0", mem = "000";
+				if (tokens.length > 2 && Character.isDigit(tokens[2].charAt(0)))
+					reg = tokens[2];
+				// Symbol or Literal operand
+				if (tokens.length > 3) {
+					String operand = tokens[3];
+					if (operand.startsWith("(S")) {
+						int symIndex = Integer.parseInt(operand.substring(operand.indexOf(',') + 1, operand.indexOf(')'))) - 1;
+						mem = symtable.get(symIndex).address;
+					} else if (operand.startsWith("(L")) {
+						int litIndex = Integer.parseInt(operand.substring(operand.indexOf(',') + 1, operand.indexOf(')'))) - 1;
+						mem = littable.get(litIndex).address;
+					}
+				}
+				output = lc + "\t" + opcode + "\t" + reg + "\t" + mem;
+			}
+			if (!output.isEmpty()) {
+				out_pass2.println(output);
+				System.out.println(output);
+			}
+		}
+		input.close();
+		out_pass2.close();
+	}
+	static String[] tokenizeString(String str, String separator) {
+		StringTokenizer st = new StringTokenizer(str, separator, false);
+		String[] s_arr = new String[st.countTokens()];
+		for (int i = 0; i < s_arr.length; i++) {
+			s_arr[i] = st.nextToken();
+		}
+		return s_arr;
+	}
+	public static void main(String[] args) throws Exception {
+		initializeTables();
+		pass2();
+	}
+}
+
+
+
+
+
+
+//input.txt
+0 (AD,01) (C,200) 
+200 (IS,04) 1 (L,1) 
+201 (IS,01) 2 (S,1) 
+202 (IS,05) 1 (S,2) 
+203 (DL,02) (C,1) 
+204 (DL,01) (C,1) 
+205 (AD,02) 
+205 (DL,02) (C,='5')
+
+
+
+
+
+//littable.txt
+='5'	205
+
+
+//symtable.txt
+ONE	203
+TEMP	204
